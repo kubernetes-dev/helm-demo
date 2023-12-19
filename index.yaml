@@ -1,0 +1,14 @@
+apiVersion: v1
+entries:
+  my-ghost:
+  - apiVersion: v2
+    appVersion: 1.16.0
+    created: "2023-12-19T21:45:23.596328757+08:00"
+    description: A Helm chart for Kubernetes
+    digest: 7afe5cf960a2c0458556b5be002d2c4750e89c7ddeb036173490ba9f485b9f77
+    name: my-ghost
+    type: application
+    urls:
+    - https://raw.githubusercontent.com/kubernetes-dev/helm-demo/main/repo/stable/my-ghost-0.1.0.tgz
+    version: 0.1.0
+generated: "2023-12-19T21:45:23.595856361+08:00"
