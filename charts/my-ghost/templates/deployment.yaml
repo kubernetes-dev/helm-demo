@@ -1,0 +1,104 @@
+# templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ template "my-ghost.fullname" . }}
+  labels:
+{{ include "my-ghost.labels" . | indent 4 }}  
+spec:
+  selector:
+    matchLabels:
+{{ include "my-ghost.selectorLabels" . | indent 6 }}
+  replicas: {{ .Values.replicaCount }}
+
+  {{- if .Values.updateStrategy }}
+  strategy: {{ toYaml .Values.updateStrategy | nindent 4 }}
+  {{- end }}
+
+  template:
+    metadata:
+      labels:
+{{ include "my-ghost.selectorLabels" . | indent 8 }}
+    spec:
+      containers:
+        - name: ghost-app
+          image: {{ printf "%s:%s" .Values.image.name .Values.image.tag }}
+          imagePullPolicy: {{ .Values.image.pullPolicy | quote }}          
+          ports:
+            - containerPort: 2368
+          env:
+            - name: NODE_ENV
+              value: {{ .Values.node_env | default "production" }}
+            {{- if .Values.url }}
+            - name: url
+              value: http://{{ .Values.url }}:38001
+            {{- end }}
+            - name: database__client
+              value: sqlite3
+            - name: database__connection__filename
+              value: content/data/ghost.db
+            - name: database__useNullAsDefault
+              value: "true"
+            - name: database__debug
+              value: "false"
+          volumeMounts:
+            - name: ghost-data
+              mountPath: /var/lib/ghost/content
+          resources:
+          {{ toYaml .Values.resources | indent 12 }}
+          {{- if .Values.startupProbe.enabled }}
+          startupProbe:
+            httpGet:
+              path: /
+              port: 2368
+            initialDelaySeconds: {{ .Values.startupProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.startupProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.startupProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.startupProbe.failureThreshold }}
+            successThreshold: {{ .Values.startupProbe.successThreshold }}
+          {{- end }}
+          {{- if .Values.livenessProbe.enabled }}
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 2368
+            initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.livenessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.livenessProbe.failureThreshold }}
+            successThreshold: {{ .Values.livenessProbe.successThreshold }}
+          {{- end }}
+          {{- if .Values.readinessProbe.enabled }}
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 2368
+            initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.readinessProbe.failureThreshold }}
+            successThreshold: {{ .Values.readinessProbe.successThreshold }}
+          {{- end }}          
+      {{- if .Values.nodeSelector }}
+      nodeSelector: {{- toYaml .Values.nodeSelector | nindent 8 }}
+      {{- end -}}
+      {{- with .Values.affinity }}
+      affinity: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if .Values.image.pullSecrets }}
+      imagePullSecrets:
+      {{- range .Values.image.pullSecrets }}
+      - name: {{ . }}
+      {{- end }}
+      {{- end }}
+      volumes:
+        - name: ghost-data
+        {{- if .Values.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.persistence.existingClaim | default (include "my-ghost.fullname" .) }}
+        {{- else }}
+          emptyDir: {}
+        {{ end }}
